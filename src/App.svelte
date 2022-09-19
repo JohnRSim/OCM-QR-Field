@@ -4,12 +4,151 @@
 	//svelte
 	import { onMount } from 'svelte';
 	
+	//Global
+	let isMounted = false;
+
+	//Field
+	let fieldSDK;
+	let field;
+	let fieldValue;
+
+	//Tmp
+	let currentLocale;
+	let localeStrings = {
+		en: {
+			validation: {
+				title: 'Invalid value',
+				message: 'You have entered more than 20000 characters'
+			}
+		},
+			es: {
+			validation: {
+				title: 'valor no válido',
+				message: 'Has introducido más de 20000 caracteres'
+			}
+		},
+		fr: {
+			validation: {
+				title: 'valeur invalide',
+				message: 'Vous avez entré plus de 20000 caractères'
+			}
+		}
+	};
+
+	/**
+	 * 
+	*/
+	onMount(async () => {
+		// this is the entry point to initialize the form sdk.
+		if (window.editorSDK) {
+			console.log('[Content Form SDK]',window.contentFormSDK);
+			await window.editorSDK.initSDK(initEditor);
+		}
+	});
+		
+	/**
+	 * 
+	*/
+	function initEditor(sdk) {
+		console.log('[initEditor]');
+		//sometimes double call is triggered using this hack
+		if (isMounted) {
+			return;
+		}
+
+		//define global
+		fieldSDK = sdk;
+
+		// retrieve the field object rendered by this custom editor
+		field = fieldSDK.getField();
+
+		// get the locale the form is currently in 
+		currentLocale = fieldSDK.getLocale();
+
+		// register a custom validation function for this editor
+		fieldSDK.setValidation(validateValue);
+
+		//register render disabled function for this editor
+		fieldSDK.registerDisable(renderDisabled);
+
+		// retrieve the current field value
+		fieldValue = field.getValue();
+
+		// if the field is updated externally, keep the editor in sync
+		field.on('update', (value) => {
+			fieldValue = value ? value : '';
+		});
+
+		isMounted = true;
+	}
+
+	/**
+	 * setFieldValue
+	*/
+	function setFieldValue() {
+		field.setValue(fieldValue);
+	}
+
+	/**
+	 * validates whether entered number of characters is more than 20000
+	 * @param value
+	 */
+	function validateValue(value) {
+		var isValid = true;
+
+		if (value && value.length > 20000) {
+			isValid = false;
+
+			return {
+				isValid: false,
+				title: getTranslatedString('validation.title', currentLocale),
+				message: getTranslatedString('validation.message', currentLocale)
+			};
+		}
+
+		return isValid;
+	}
+
+	/**
+	 * disable/enable call back that gets called if the content form
+	 * needs to enable/disable this editor
+	 * @param value
+	 */
+	function renderDisabled(value) {
+		if (value) {
+			//document.getElementById('textInput').disabled = true;
+		} else {
+			//document.getElementById('textInput').disabled = false;
+		}
+	}
+
+	/**
+	 * getTranslatedString
+	 * @param key
+	 * @param locale
+	 */
+	function getTranslatedString(key, locale) {
+		key = key || '';
+		locale = locale || 'en';
+
+		var propList = key ? key.split('.') : [],
+			currValue = localeStrings[locale];
+
+		for (var i = 0, len = propList.length; i < len; i++) {
+		currValue[propList[i]] = currValue[propList[i]] || {};
+		currValue = currValue[propList[i]];
+		}
+
+		var translatedString = (typeof currValue === 'string') ? currValue : undefined;
+
+		return translatedString;
+	}
 </script>
 
 
 <!-- Wrapper -->
 <section class="bitmapbytes-QRFormField">
-	
+	<input on:blur="{setFieldValue}" bind:value="{fieldValue}" />
 </section>
 <!-- xWrapper -->
 
