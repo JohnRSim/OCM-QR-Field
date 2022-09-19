@@ -16,22 +16,20 @@ This field stores json data which also contains svg.
 
 ```
 {
-  "type":"url",
-  "fields": {
-    "url":"https://bitmapbytes.com"
-  },
-  "dataString": "https://bitmapbytes.com"
-  "ui":{
-    "bgHexColor": "#ffffff",
-    "qrHexColor":"#111111",
-    "alignmentRadius": 0,
-    "moduleRadius": 0,
-    "moduleSeperation": 0,
-  },
-  "svg": {
-    <svg>...</svg>
-  }
-}
+		type: "URL",
+		fields: {
+			url: "https://bitmapbytes.com",
+		},
+		dataString: "https://bitmapbytes.com",
+		ui: {
+			bgHexColor: "#ffffff",
+			qrHexColor: "#111111",
+			alignmentRadius: 0,
+			moduleRadius: 0,
+			moduleSeperation: 0,
+		},
+		svg: "",
+	};
 ```
 
 # OCM Example QR Generator Field Component
