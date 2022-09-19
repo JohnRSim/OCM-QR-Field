@@ -3,6 +3,7 @@
 <script>
 	//svelte
 	import { onMount } from 'svelte';
+	import qrGen from './lib/utils/QRT.js';
 	
 	//Global
 	let isMounted = false;
@@ -10,7 +11,18 @@
 	//Field
 	let fieldSDK;
 	let field;
-	let fieldValue;
+	let fieldValue ='';
+
+	//QRCode
+	let QRCode = '<div>Empty</div>';
+	let bgHexColor;
+	let qrHexColor;
+	let alignmentRadius;
+	let moduleRadius;
+	let moduleSeperation;
+
+	//refresh QR;
+	$: QRGenerator(fieldValue,bgHexColor,qrHexColor,alignmentRadius,moduleRadius,moduleSeperation)
 
 	//Tmp
 	let currentLocale;
@@ -44,6 +56,7 @@
 			console.log('[Content Form SDK]',window.contentFormSDK);
 			await window.editorSDK.initSDK(initEditor);
 		}
+		//QRGenerator('s');
 	});
 		
 	/**
@@ -80,6 +93,21 @@
 		});
 
 		isMounted = true;
+	}
+
+	/**
+	 * QRGenerator
+	 * @param txt
+	 * @param bgHexColor
+	 * @param qrHexColor
+	 * @param alignmentRadius
+	 * @param moduleRadius
+	 * @param moduleSeperation
+	 */
+	function QRGenerator(txt,bgHexColor,qrHexColor,alignmentRadius,moduleRadius,moduleSeperation) {
+		//console.log('[QRGenerator]',txt)
+		const myQR = qrGen(txt);
+		QRCode = myQR;
 	}
 
 	/**
@@ -148,6 +176,7 @@
 
 <!-- Wrapper -->
 <section class="bitmapbytes-QRFormField">
+	{@html QRCode}
 	<input on:blur="{setFieldValue}" bind:value="{fieldValue}" />
 </section>
 <!-- xWrapper -->
