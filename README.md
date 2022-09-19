@@ -4,3 +4,6 @@
 # OCM-QR-Field (In Development)
 
 Free Custom Component built with Svelte for generating QR Codes from form fields; installed as a component and used directly within an OCM Form.
+
+# OCM Example QR Generator Field Component
+![OCM_createQR](https://user-images.githubusercontent.com/364208/191046204-ea19e3cb-fd0a-4e47-85ca-e8a44d9dd956.png)
