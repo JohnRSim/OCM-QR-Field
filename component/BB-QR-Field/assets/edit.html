@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!-- This is a plain text field custom field editor, it handles 'TEXT' and 'LARGETEXT' data types only.-->
+<html>
+<head>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font: normal 100% "Helvetica Neue", 'Segoe UI', sans-serif-regular, Helvetica, Arial, sans-serif;
+    }
+    input {
+      width: 100%;
+      height: 32px;
+      font-size: 14px;
+      color: #333;
+      background: #fcfdfe;
+      border: 1px solid #dfe4e7;
+      border-radius: 2px;
+      padding: 4px 5px;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <input id="textInput" type="text">
+</body>
+
+<!-- load the field editor SDK -->
+<script src="/documents/static/gemini/api/field-editor-sdk-1.0.js"></script>
+<script>
+/* globals editorSDK */
+(function() {
+  var currentLocale;
+
+  var localeStrings = {
+    en: {
+      validation: {
+        title: 'Invalid value',
+        message: 'You have entered more than 20000 characters'
+      }
+    },
+    es: {
+      validation: {
+          title: 'valor no válido',
+          message: 'Has introducido más de 20000 caracteres'
+      }
+    },
+    fr: {
+      validation: {
+        title: 'valeur invalide',
+        message: 'Vous avez entré plus de 20000 caractères'
+      }
+    }
+  };
+
+  function getTranslatedString(key, locale) {
+    key = key || '';
+    locale = locale || 'en';
+
+    var propList = key ? key.split('.') : [],
+        currValue = localeStrings[locale];
+
+    for (var i = 0, len = propList.length; i < len; i++) {
+      currValue[propList[i]] = currValue[propList[i]] || {};
+      currValue = currValue[propList[i]];
+    }
+
+    var translatedString = (typeof currValue === 'string') ? currValue : undefined;
+
+    return translatedString;
+  }
+
+  //
+  // sample validation function that
+  // validates whether entered number of characters is more than 20000
+  function validateValue(value) {
+    var isValid = true;
+
+    if (value && value.length > 20000) {
+      isValid = false;
+
+      return {
+        isValid: false,
+        title: getTranslatedString('validation.title', currentLocale),
+        message: getTranslatedString('validation.message', currentLocale)
+      };
+    }
+
+    return isValid;
+  }
+
+  //
+  // disable/enable call back that gets called if the content form
+  // needs to enable/disable this editor
+  function renderDisabled(value) {
+    if (value) {
+      document.getElementById('textInput').disabled = true;
+    } else {
+      document.getElementById('textInput').disabled = false;
+    }
+  }
+
+  function initEditor(sdk) {
+    // retrieve the field object rendered by this custom editor
+    var field = sdk.getField();
+
+    // get the locale the form is currently in 
+    currentLocale = sdk.getLocale();
+
+    // register a custom validation function for this editor
+    sdk.setValidation(validateValue);
+
+    //register render disabled function for this editor
+    sdk.registerDisable(renderDisabled);
+
+    // retrieve the current field value
+    var value = field.getValue();
+
+    var inputField = document.getElementById('textInput');
+
+    // set the current field value in this editor
+    inputField.value = value;
+
+    // when the editor value changes, set the changed value
+    // to the field
+    inputField.addEventListener('change', function(e) {
+      field.setValue(inputField.value);
+    });
+
+    // if the field is updated externally, keep the editor in sync
+    field.on('update', function(value) {
+      inputField.value = value ? value : '';
+    });
+  }
+
+  // this is the entry point to initialize the editor sdk.
+  editorSDK.initSDK(initEditor);
+
+})();
+</script>
+
+</html>

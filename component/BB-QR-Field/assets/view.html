@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <style type="text/css">
+    body {
+      margin: 0;
+      padding: 0;
+      font: normal 100% "Helvetica Neue", 'Segoe UI', sans-serif-regular, Helvetica, Arial, sans-serif;
+      color: #666;
+    }
+    div {
+      font-size: .875rem;
+    }
+    span {
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="inputValue"></div>
+</body>
+
+<!-- load the field editor SDK -->
+<script src="/documents/static/gemini/api/field-editor-sdk-1.0.js"></script>
+<script>
+/* globals editorSDK */
+(function() {
+  var textElement = document.getElementById('inputValue');
+
+  function initEditor(sdk) {
+    // retrieve the field object rendered by this custom editor
+    var field = sdk.getField();
+
+    // retrieve the current field value
+    var value = field.getValue();
+
+    if (value) {
+        textElement.innerText = value;
+    } else {
+        textElement.innerHTML = '<span>No value specified</span>';
+    }
+  }
+
+  editorSDK.initSDK(initEditor);
+
+})();
+</script>
+
+</html>
