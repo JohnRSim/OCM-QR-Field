@@ -5,6 +5,12 @@
 
 Free Custom Component built with Svelte for generating QR Codes from form fields; installed as a component and used directly within an OCM Form.
 
+
+
+https://user-images.githubusercontent.com/364208/191071289-0b733cf5-fcfc-46fd-8c4c-feae37817c34.mp4
+
+
+
 # Data Type "Large Text"
 This field stores json data which also contains svg.
 
