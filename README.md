@@ -44,6 +44,8 @@ Open the components folder and there is a zipped "BB-QR-Field.zip" you can uploa
 2. Drop Data type of "Large Text"
 3. In the data types appearance setting select BB-QR-Field.
 
+![image](https://user-images.githubusercontent.com/364208/191252129-70500c1b-4278-4ecc-ab18-e8ac7c8a679e.png)
+
 That's it you can now create QR codes from URLs... 
 
 
