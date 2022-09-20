@@ -63,6 +63,7 @@ npm run build
 - Rename ocm-qr-field.umd.cjs to ocm-qr-field.umd.js
 - Open up the component assets folder and drop this in and replace
 - Redeploy to OCM.
+- OCM asset View - generate QR display with download option. 
 
 # OCM Example QR Generator Field Component
 ![OCM_createQR](https://user-images.githubusercontent.com/364208/191046204-ea19e3cb-fd0a-4e47-85ca-e8a44d9dd956.png)
