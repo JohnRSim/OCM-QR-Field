@@ -2,16 +2,25 @@
 
 <script>
 	//svelte
-	import { onMount } from "svelte";
+	import { onMount, tick } from "svelte";
+
+	//libs
 	import qrGen from "./lib/utils/QRT.js";
 
 	//Global
 	let isMounted = false;
+	let componentHeight;
 
+	//bind dom
+	let qrWrapp;
+
+	//fieldvalue
 	let dataset = {
 		type: "URL",
 		fields: {
-			url: "https://bitmapbytes.com",
+			type: {
+				url: "https://bitmapbytes.com",
+			},
 		},
 		dataString: "https://bitmapbytes.com",
 		ui: {
@@ -23,16 +32,20 @@
 		},
 		svg: "",
 	};
+
+	//tmp
+	let hex;
+
 	//supported qr types
 	let types = [
 		"URL",
 		"VCARD",
-		"TXT",
-		"EMAIL",
-		"SMS",
-		"WIFI",
-		"CRYPTO",
-		"TWITTER",
+		//"TXT",
+		//"EMAIL",
+		//"SMS",
+		//"WIFI",
+		//"CRYPTO",
+		//"TWITTER",
 		//"FACEBOOK",
 		//"PDF",
 		//"MP3",
@@ -43,9 +56,13 @@
 	//Field
 	let fieldSDK;
 	let field;
-	let fieldValue = "";
+	let currentLocale;
+
+	//type[URL]
+	let URL = "";
 
 	//QRCode
+	let dataString = '';
 	let QRCode = "<div>Empty</div>";
 	let bgHexColor = "#ffffff";
 	let qrHexColor = "#111111";
@@ -53,39 +70,33 @@
 	let moduleRadius = 0;
 	let moduleSeperation = 0;
 
+	//timer
+	let QRGeneratorTimer
+
+	//downloadQRURL
+	let downloadUrl;
+
+	//debug data
+	let debug = '';
+
 	//refresh QR;
 	$: QRGenerator(
-		fieldValue,
+		dataString,
 		bgHexColor,
 		qrHexColor,
 		alignmentRadius,
 		moduleRadius,
 		moduleSeperation
 	);
+	//update datastring
+	$: if (URL) {
+		dataset.fields.type.url = URL;
+		dataString = URL;
+	}
 
-	//Tmp
-	let currentLocale;
-	let localeStrings = {
-		en: {
-			validation: {
-				title: "Invalid value",
-				message: "You have entered more than 20000 characters",
-			},
-		},
-		es: {
-			validation: {
-				title: "valor no válido",
-				message: "Has introducido más de 20000 caracteres",
-			},
-		},
-		fr: {
-			validation: {
-				title: "valeur invalide",
-				message: "Vous avez entré plus de 20000 caractères",
-			},
-		},
-	};
-
+	$: if (componentHeight > 0) {
+		setFrameHeight();
+	}
 	/**
 	 *
 	 */
@@ -96,6 +107,17 @@
 			await window.editorSDK.initSDK(initEditor);
 		}
 	});
+
+	/**
+	 * safeJsonParse
+	*/
+	function safeJsonParse(str) {
+		try {
+			return [null, JSON.parse(str)];
+		} catch (err) {
+			return [err];
+		}
+	}
 
 	/**
 	 *
@@ -123,14 +145,61 @@
 		fieldSDK.registerDisable(renderDisabled);
 
 		// retrieve the current field value
-		fieldValue = field.getValue();
+		const getFieldValue = field.getValue();
+		const [err, result] = safeJsonParse(getFieldValue);
+		//no data define set field with default structure/obj value
+		if (err) {
+			console.log('Failed to parse JSON: ',err.message,getFieldValue);
+			setFieldValue();
+		} else {
+			console.log(result);
+			dataset = JSON.parse(getFieldValue);
+		}
+
+		//grabs values stored and plces them into fields
+		updateDataset();
 
 		// if the field is updated externally, keep the editor in sync
 		field.on("update", (value) => {
-			fieldValue = value ? value : "";
+			console.log('[field][qr][update]');
+			const [err, result] = safeJsonParse(value);
+			//no data define set field with default structure/obj value
+			if (err) {
+				console.log('Failed to parse JSON: ',err.message,value);
+				//reset value
+				setFieldValue();
+			} else {
+				console.log(result);
+				//push update
+				dataset = JSON.parse(value);
+			}
 		});
 
 		isMounted = true;
+	}
+
+	/**
+	 * updateDataset
+	*/
+	function updateDataset() {
+
+		//Update dataString based on type selection and any field binding values
+		switch(dataset.type) {
+			case 'URL':
+				//update QR string
+				dataString = dataset.fields.type.url; //auto updates dataString
+				//update binding
+				URL = dataset.fields.type.url;
+			break;
+		}
+
+		//update QR UI
+		QRCode = dataset.ui.QRCode;
+		bgHexColor = dataset.ui.bgHexColor;
+		qrHexColor = dataset.ui.qrHexColor;
+		alignmentRadius = dataset.ui.alignmentRadius;
+		moduleRadius = dataset.ui.moduleRadius;
+		moduleSeperation = dataset.ui.moduleSeperation;
 	}
 
 	/**
@@ -150,10 +219,19 @@
 		moduleRadius,
 		moduleSeperation
 	) {
+		clearTimeout(QRGeneratorTimer);
+
+		//console.log('[QRGenerator]',txt)
+		if (moduleSeperation > 0 && moduleRadius === 0) {
+			moduleRadius = 1;
+		}
+
 		//console.log('[QRGenerator]',txt)
 		if (moduleRadius > 0 && alignmentRadius === 0) {
 			alignmentRadius = 1;
 		}
+
+		//grab svg generated
 		const myQR = qrGen(
 			txt,
 			bgHexColor,
@@ -162,14 +240,46 @@
 			moduleRadius,
 			moduleSeperation
 		);
+
+		//update fieldset data
+		dataset.dataString = txt;
+		//update ui
+		dataset.ui = {
+			bgHexColor,
+			qrHexColor,
+			alignmentRadius,
+			moduleRadius,
+			moduleSeperation,
+		}
+		//update svg val
+		dataset.svg = myQR;
+
+		//update svg
 		QRCode = myQR;
+
+		//generate download link
+		QRGeneratorTimer = setTimeout(updateDownloadLink,300);
+		
 	}
 
 	/**
 	 * setFieldValue
 	 */
 	function setFieldValue() {
-		field.setValue(fieldValue);
+		console.log('[setFieldValue]');
+		//check field ok..
+		if ((typeof(dataset) === 'object') && (dataset !== null)) {
+			console.log('..settingvalue',dataset);
+			
+			let data = JSON.stringify(dataset);
+			if (field) {
+				field.setValue(data);
+			}
+
+			debug = data;
+		} else {
+			console.error('error: dataset type not an object....',dataset);
+		}
 	}
 
 	/**
@@ -177,18 +287,17 @@
 	 * @param value
 	 */
 	function validateValue(value) {
-		var isValid = true;
+		//validate
+		let isValid = true;
 
-		if (value && value.length > 20000) {
-			isValid = false;
+		const [err, result] = safeJsonParse(value);
 
+		//no data define set field with default structure/obj value
+		if (err) {
 			return {
 				isValid: false,
-				title: getTranslatedString("validation.title", currentLocale),
-				message: getTranslatedString(
-					"validation.message",
-					currentLocale
-				),
+				title: 'QR Code Invalid',
+				message: 'An Error occured with the QR Code generator unable to save to OCM'
 			};
 		}
 
@@ -209,42 +318,73 @@
 	}
 
 	/**
-	 * getTranslatedString
-	 * @param key
-	 * @param locale
-	 */
-	function getTranslatedString(key, locale) {
-		key = key || "";
-		locale = locale || "en";
-
-		var propList = key ? key.split(".") : [],
-			currValue = localeStrings[locale];
-
-		for (var i = 0, len = propList.length; i < len; i++) {
-			currValue[propList[i]] = currValue[propList[i]] || {};
-			currValue = currValue[propList[i]];
+	 * setFrameHeight
+	*/
+	function setFrameHeight() {
+		//add delay to refresh heights
+		if (fieldSDK) {
+			setTimeout(() => {
+				fieldSDK.resize({ 
+					height: `${componentHeight+40}px`, 
+				});
+			},10);
 		}
+	}
 
-		var translatedString =
-			typeof currValue === "string" ? currValue : undefined;
+	function updateDownloadLink() {
+		//get svg element.
+		if (qrWrapp) {
 
-		return translatedString;
+			const svg = qrWrapp.getElementsByTagName("svg")[0];
+			console.log('updateDownloadLink',svg,qrWrapp.getElementsByTagName("svg"))
+			if (svg) {
+				//get svg source.
+				const serializer = new XMLSerializer();
+				let source = serializer.serializeToString(svg);
+
+				//add name spaces.
+				if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+					source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+				}
+				if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+					source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+				}
+
+				//add xml declaration
+				source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+				//convert svg source to URI data scheme.
+				downloadUrl = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source);
+					
+			}
+		}
 	}
 </script>
 
+<!-- Window -->
+<svelte:window on:blur="{setFieldValue}"></svelte:window>
+<!-- xWindow -->
+
 <!-- Wrapper -->
 <section class="bitmapbytes-QRFormField">
-	<article>
+	<article bind:clientHeight="{componentHeight}">
+		<!-- DEBUG -->
+		<div style="display:none">
+			<textarea>{debug}</textarea>
+		</div>
+		<!-- xDEBUG -->
+
+		<!-- QR Type Selector-->
 		<div>
 			<dl>
 				<dt style="text-align:center; margin-bottom:10px;">
-					<label>QR Type</label>
+					<label for="fQRType">QR Type</label>
 				</dt>
 				<dd>
 					<ul>
 						{#each types as type}
 							<li
-								on:click={() => {
+								on:click={async() => {
 									dataset.type = type;
 								}}
 								class:active={type === dataset.type}
@@ -256,15 +396,22 @@
 				</dd>
 			</dl>
 		</div>
+		<!-- xQR Type Selector-->
+
+		<!-- Sepertor -->
 		<div class="hr"><hr /></div>
+		<!-- xSepertor -->
+
+		<!-- QR Data -->
 		<main style="padding:10px">
 			{#if dataset.type === "URL"}
 				<dl>
-					<dt><label>{dataset.type}</label></dt>
+					<dt><label for="fURL">{dataset.type}</label></dt>
 					<dd class="input">
 						<input
+							id="fURL"
 							on:blur={setFieldValue}
-							bind:value={fieldValue}
+							bind:value={URL}
 							type="text"
 							placeholder="Enter {dataset.type}"
 						/>
@@ -272,15 +419,16 @@
 				</dl>
 			{/if}
 			{#if dataset.type === "VCARD"}
+			<p><b>.... Working on other QR TYPES... coming soon!</b></p>
 				<div>
 					<dl>
 						<dt>
-							<label>Your Name:</label>
+							<label for="fName">Your Name:</label>
 						</dt>
 						<dd class="split">
 							<div class="input">
 								<input
-									id="firstname"
+									id="fName"
 									type="text"
 									placeholder="First name"
 									
@@ -300,12 +448,12 @@
 				<div>
 					<dl>
 						<dt>
-							<label>Contact:</label>
+							<label for="fContact">Contact:</label>
 						</dt>
 						<dd>
 							<div class="input" style="margin-bottom:10px;">
 								<input
-									id="mobileNumber"
+									id="fContact"
 									type="text"
 									placeholder="Mobile"
 									/>
@@ -313,14 +461,12 @@
 							<div class="split">
 								<div class="input">
 									<input
-										id="phoneNumber"
 										type="text"
 										placeholder="Phone"
 										/>
 								</div>
 								<div class="input">
 									<input
-										id="faxNumber"
 										type="text"
 										placeholder="Fax"
 										/>
@@ -332,11 +478,11 @@
 				<div>
 					<dl>
 						<dt>
-							<label>Email:</label>
+							<label for="fEmail">Email:</label>
 						</dt>
 						<dd class="input">
 							<input
-								id="email"
+								id="fEmail"
 								type="text"
 								placeholder="your@email.com"
 								
@@ -347,19 +493,18 @@
 				<div>
 					<dl>
 						<dt>
-							<label>Company:</label>
+							<label for="fCompany">Company:</label>
 						</dt>
 						<dd class="split">
 							<div class="input">
 								<input
-									id="company"
+									id="fCompany"
 									type="text"
 									placeholder="Company"
 									/>
 							</div>
 							<div class="input">
 								<input
-									id="job"
 									type="text"
 									placeholder="Your Job"
 									/>
@@ -370,11 +515,11 @@
 				<div>
 					<dl>
 						<dt>
-							<label>Street:</label>
+							<label for="fStreet">Street:</label>
 						</dt>
 						<dd class="input">
 							<input
-								id="street"
+								id="fStreet"
 								type="text"
 								/>
 						</dd>
@@ -383,18 +528,17 @@
 				<div>
 					<dl>
 						<dt>
-							<label>City:</label>
+							<label for="fCity">City:</label>
 						</dt>
 						<dd class="split">
 							<div class="input">
 								<input
-									id="city"
+									id="fCity"
 									type="text"
 									/>
 							</div>
 							<div class="input">
 								<input
-									id="zip"
 									type="text"
 									placeholder="ZIP"
 									/>
@@ -405,11 +549,11 @@
 				<div>
 					<dl>
 						<dt>
-							<label>State:</label>
+							<label for="fState">State:</label>
 						</dt>
 						<dd class="input">
 							<input
-								id="State"
+								id="StafStatete"
 								type="text"
 								/>
 						</dd>
@@ -418,11 +562,11 @@
 				<div>
 					<dl>
 						<dt>
-							<label>Country:</label>
+							<label for="fCountry">Country:</label>
 						</dt>
 						<dd class="input">
 							<input
-								id="Country"
+								id="fCountry"
 								type="text"
 								/>
 						</dd>
@@ -431,11 +575,11 @@
 				<div>
 					<dl>
 						<dt>
-							<label>Website:</label>
+							<label for="fWebsite">Website:</label>
 						</dt>
 						<dd class="input">
 							<input
-								id="Website"
+								id="fWebsite"
 								type="text"
 								placeholder="www.your-website.com"
 								/>
@@ -443,13 +587,12 @@
 					</dl>
 				</div>
 			{/if}
-			{#if dataset.type === "TXT"}
+			<!--{#if dataset.type === "TXT"}
 				<dl>
-					<dt><label>{dataset.type}</label></dt>
+					<dt><label for="fTxt">{dataset.type}</label></dt>
 					<dd class="input">
 						<input
-							on:blur={setFieldValue}
-							bind:value={fieldValue}
+							id="fTxt"
 							type="text"
 							placeholder="Enter {dataset.type}"
 						/>
@@ -644,18 +787,24 @@
 						</dd>
 					</dl>
 				</div>
-			{/if}
+			{/if}-->
 		</main>
+		<!-- QR Data -->
+		
+		<!-- Seperator -->
 		<div class="hr"><hr /></div>
+		<!-- Seperator -->
+		
+		<!-- Settings -->
 		<div class="split settings">
 			<div>
 				<dl>
-					<dt><label>Alignment Radius</label></dt>
+					<dt><label for="fAlignmentRad">Alignment Radius</label></dt>
 					<dd class="input range">
 						<input
 							type="range"
-							id="volume"
-							name="volume"
+							id="fAlignmentRad"
+							name="fAlignmentRad"
 							min="0"
 							max="100"
 							bind:value={alignmentRadius}
@@ -663,12 +812,12 @@
 					</dd>
 				</dl>
 				<dl>
-					<dt><label>Module Radius</label></dt>
+					<dt><label for="fModuleRad">Module Radius</label></dt>
 					<dd class="input range">
 						<input
 							type="range"
-							id="volume"
-							name="volume"
+							id="fModuleRad"
+							name="fModuleRad"
 							min="0"
 							max="100"
 							bind:value={moduleRadius}
@@ -676,32 +825,47 @@
 					</dd>
 				</dl>
 				<dl>
-					<dt><label>Module Seperation</label></dt>
+					<dt><label for="fModuleSep">Module Seperation</label></dt>
 					<dd class="input range">
 						<input
 							type="range"
-							id="volume"
-							name="volume"
+							id="fModuleSep"
+							name="fModuleSep"
 							min="0"
-							max="60"
+							max="40"
 							bind:value={moduleSeperation}
 						/>
 					</dd>
 				</dl>
+				<!--
+				<dl>
+					<dt><label>Background Colour</label></dt>
+					<dd class="input range">
+					</dd>
+				</dl>
+				<dl>
+					<dt><label>QR Colour</label></dt>
+					<dd class="input range">
+					</dd>
+				</dl>-->
+
 			</div>
 			<div class="preview">
-				<div class="qrWrapp">
+				<div class="qrWrapp" bind:this="{qrWrapp}">
 					{@html QRCode}
+					{#if (downloadUrl)}
+					<a class="download" href="{downloadUrl}" download="QRCode.svg">Download SVG</a>
+					{/if}
 				</div>
 			</div>
 		</div>
+		<!-- Settings -->
 	</article>
 </section>
 
 <!-- xWrapper -->
 <style>
 	section {
-		height:940px
 	}
 	main {
 		max-height:400px;
@@ -720,7 +884,7 @@
 			0px 0px 0px 1px rgba(51, 65, 85, 0.1),
 			0px 20px 25px -5px rgba(0, 0, 0, 0.05),
 			0px 8px 10px -6px rgba(0, 0, 0, 0.05);
-		width: 400px;
+		/*width: 400px;*/
 	}
 	ul {
 		display: flex;
@@ -814,11 +978,12 @@
 	}
 
 	.qrWrapp {
+		position: relative;
 		flex: 1;
 		box-shadow: 0px 0px 0px 0px rgb(255, 255, 255),
 			0px 0px 0px 1px rgba(51, 65, 85, 0.1),
 			0px 1px 2px 0px rgba(0, 0, 0, 0.05);
-		border-radius: 4px;
+		border-radius: 10px;
 		overflow: hidden;
 	}
 	.preview {
@@ -839,5 +1004,15 @@
 	.bitmapbytes-QRFormField ::-webkit-scrollbar-button {
 		width:8px;
 		height:10px;
+	}
+	.download {
+		background: rgb(15,23,42);
+		border-radius: 8px;
+		padding:4px 8px;
+		margin:0px auto 10px;
+		max-width:140px;
+		display: block;
+		text-align:center;
+		color:#fff;
 	}
 </style>
