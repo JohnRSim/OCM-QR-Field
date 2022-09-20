@@ -990,6 +990,7 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
+		flex:3;
 	}
 	.bitmapbytes-QRFormField ::-webkit-scrollbar {
 		display:block;
